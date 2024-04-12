@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -18,6 +18,7 @@ import ProgressBar from "@/components/ProgressBar";
 
 export default function Results() {
     const router = useRouter();
+    const [distance, setDistance] = useState(0);
 
     const {
         session,
@@ -26,40 +27,13 @@ export default function Results() {
     } = useContext(AppContext);
 
     const calculateDistance = () => {
-        return selectedPos
-            ? convertDistance(
-                  getDistance(
-                      {
-                          latitude: selectedPos.lat,
-                          longitude: selectedPos.lng
-                      },
-
-                      {
-                          latitude: correctPos.lat,
-                          longitude: correctPos.lng
-                      }
-                  ),
-                  "km"
-              ).toFixed(2)
-            : 0;
+        return selectedPos ? convertDistance(distance, "km").toFixed(2) : 0;
     };
 
     const calculateScore = (): number => {
         if (!selectedPos) return 0;
 
-        const distanceMeters = getDistance(
-            {
-                latitude: selectedPos.lat,
-                longitude: selectedPos.lng
-            },
-
-            {
-                latitude: correctPos.lat,
-                longitude: correctPos.lng
-            }
-        );
-
-        return Math.floor(Math.max(5000 - distanceMeters / 250, 0));
+        return Math.floor(Math.max(5000 - distance / 250, 0));
     };
 
     const handleNextRound = () => {
@@ -86,6 +60,22 @@ export default function Results() {
 
         router.push("/");
     };
+
+    useEffect(() => {
+        setDistance(
+            getDistance(
+                {
+                    latitude: selectedPos.lat,
+                    longitude: selectedPos.lng
+                },
+
+                {
+                    latitude: correctPos.lat,
+                    longitude: correctPos.lng
+                }
+            )
+        );
+    }, []);
 
     return (
         correctPos && (

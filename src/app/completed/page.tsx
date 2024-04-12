@@ -4,12 +4,7 @@ import { useContext } from "react";
 
 import AppContext from "@/context/AppContext";
 
-import {
-    LoadScript,
-    GoogleMap,
-    MarkerF,
-    Polyline
-} from "@react-google-maps/api";
+import { GoogleMap, MarkerF, Polyline } from "@react-google-maps/api";
 
 export default function Completed() {
     const {

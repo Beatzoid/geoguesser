@@ -17,6 +17,7 @@ import {
 import Link from "next/link";
 
 import AppContext from "../context/AppContext";
+import { MoonLoader } from "react-spinners";
 
 // Memo prevents the components from re-rendering when the child components re-render
 const MemoizedMarker = memo(MarkerF);
@@ -35,7 +36,6 @@ export default function Home() {
     const [markerPosition, setMarkerPosition] = useState<any>(null);
 
     const [bigMap, setBigMap] = useState(false);
-
 
     const { isLoaded } = useLoadScript({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY!,
@@ -187,17 +187,23 @@ export default function Home() {
     const hasStreetView = (
         lat: number,
         lng: number,
-        callback: (status: boolean) => any
+        callback: (status: boolean, coords?: any) => any
     ) => {
         const sv = new google.maps.StreetViewService();
 
-        sv.getPanorama({ location: { lat, lng }, radius: 100 }, (_, status) => {
-            if (status === "OK") {
-                callback(true);
-            } else {
-                callback(false);
+        sv.getPanorama(
+            { location: { lat, lng }, radius: 100000 },
+            (data, status) => {
+                if (status === "OK") {
+                    callback(true, {
+                        lat: data?.location?.latLng?.lat(),
+                        lng: data?.location?.latLng?.lng()
+                    });
+                } else {
+                    callback(false);
+                }
             }
-        });
+        );
     };
 
     const getRandomStreetViewCoords = (
@@ -206,9 +212,9 @@ export default function Home() {
         function tryGenerate() {
             const coords = generateRandomLocation();
 
-            hasStreetView(coords.lat, coords.lng, (hasView) => {
+            hasStreetView(coords.lat, coords.lng, (hasView, correctCoords) => {
                 if (hasView) {
-                    callback(coords);
+                    callback(correctCoords);
                     return;
                 }
 
@@ -302,5 +308,16 @@ export default function Home() {
                 </div>
             </GoogleMap>
         </>
-    ) : null;
+    ) : (
+        <div
+            style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                height: "100vh"
+            }}
+        >
+            <MoonLoader />
+        </div>
+    );
 }
