@@ -1,113 +1,306 @@
-import Image from "next/image";
+"use client";
+
+import {
+    memo,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useState
+} from "react";
+import {
+    GoogleMap,
+    StreetViewPanorama,
+    MarkerF,
+    useLoadScript
+} from "@react-google-maps/api";
+import Link from "next/link";
+
+import AppContext from "../context/AppContext";
+
+// Memo prevents the components from re-rendering when the child components re-render
+const MemoizedMarker = memo(MarkerF);
+const MemoizedGoogleMap = memo(GoogleMap);
+const MemoizedStreetViewPanorama = memo(StreetViewPanorama);
+
+const libraries = ["streetView", "core", "marker", "places"];
 
 export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+    const {
+        setSession,
+        session,
+        session: { correctPos, score }
+    } = useContext(AppContext);
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+    const [markerPosition, setMarkerPosition] = useState<any>(null);
 
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
+    const [bigMap, setBigMap] = useState(false);
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
+    const { isLoaded } = useLoadScript({
+        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY!,
+        // @ts-ignore
+        libraries
+    });
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  );
+    const setBigMapTrue = useCallback(() => {
+        setBigMap(true);
+    }, []);
+
+    const setBigMapFalse = useCallback(() => {
+        setBigMap(false);
+    }, []);
+
+    const streetViewOptions = useMemo(
+        () => ({
+            position: correctPos,
+            visible: true,
+            enableCloseButton: false,
+            showRoadLabels: false,
+            motionTracking: false,
+            motionTrackingControl: false,
+            pov: { heading: 100, pitch: 0 },
+            addressControl: false,
+            fullscreenControl: false,
+            zoomControl: false
+        }),
+        [correctPos]
+    );
+
+    const mapContainerStyle = useMemo(
+        () => ({
+            zIndex: 100,
+            width: bigMap ? "50%" : "25%",
+            height: bigMap ? "50%" : "25%",
+            position: "absolute",
+            bottom: "70px",
+            right: "5px",
+            border: "1px solid black",
+            flex: 1
+        }),
+        [bigMap]
+    );
+
+    const handleMapClick = useCallback(
+        (e: any) => {
+            setMarkerPosition({
+                lat: e.latLng!.lat(),
+                lng: e.latLng!.lng()
+            });
+
+            setSession((prevSession: any) => ({
+                ...prevSession,
+                selectedPos: {
+                    lat: e.latLng!.lat(),
+                    lng: e.latLng!.lng()
+                }
+            }));
+        },
+        [setSession]
+    );
+
+    const center = useMemo(
+        () => markerPosition || { lat: 0, lng: 0 },
+        [markerPosition]
+    );
+
+    const generateRandomLocation = () => {
+        const urbanAreas = {
+            "New York City": {
+                westBound: -74.006,
+                eastBound: -73.935,
+                southBound: 40.689,
+                northBound: 40.878
+            },
+            Tokyo: {
+                westBound: 139.562,
+                eastBound: 139.917,
+                southBound: 35.564,
+                northBound: 35.762
+            },
+            London: {
+                westBound: -0.214,
+                eastBound: 0.021,
+                southBound: 51.384,
+                northBound: 51.686
+            },
+            Paris: {
+                westBound: 2.226,
+                eastBound: 2.475,
+                southBound: 48.807,
+                northBound: 48.905
+            },
+            Beijing: {
+                westBound: 116.349,
+                eastBound: 116.537,
+                southBound: 39.761,
+                northBound: 39.971
+            },
+            "São Paulo": {
+                westBound: -46.794,
+                eastBound: -46.596,
+                southBound: -23.655,
+                northBound: -23.48
+            },
+            "Los Angeles": {
+                westBound: -118.67,
+                eastBound: -118.155,
+                southBound: 33.703,
+                northBound: 34.328
+            },
+            Mumbai: {
+                westBound: 72.775,
+                eastBound: 72.939,
+                southBound: 18.889,
+                northBound: 19.25
+            },
+            Moscow: {
+                westBound: 37.498,
+                eastBound: 37.723,
+                southBound: 55.612,
+                northBound: 55.913
+            },
+            "Mexico City": {
+                westBound: -99.299,
+                eastBound: -99.038,
+                southBound: 19.201,
+                northBound: 19.526
+            }
+        };
+
+        // Get a random city from the urbanAreas object
+        const cities = Object.keys(urbanAreas);
+        const randomCity = cities[Math.floor(Math.random() * cities.length)];
+        const cityBounds = urbanAreas[randomCity as keyof typeof urbanAreas];
+
+        // Generate random coordinates within the boundaries of the selected city
+        const randomLat =
+            Math.random() * (cityBounds.northBound - cityBounds.southBound) +
+            cityBounds.southBound;
+        const randomLng =
+            Math.random() * (cityBounds.eastBound - cityBounds.westBound) +
+            cityBounds.westBound;
+
+        return { city: randomCity, lat: randomLat, lng: randomLng };
+    };
+
+    const hasStreetView = (
+        lat: number,
+        lng: number,
+        callback: (status: boolean) => any
+    ) => {
+        const sv = new google.maps.StreetViewService();
+
+        sv.getPanorama({ location: { lat, lng }, radius: 100 }, (_, status) => {
+            if (status === "OK") {
+                callback(true);
+            } else {
+                callback(false);
+            }
+        });
+    };
+
+    const getRandomStreetViewCoords = (
+        callback: (coords: { lat: number; lng: number }) => any
+    ) => {
+        function tryGenerate() {
+            const coords = generateRandomLocation();
+
+            hasStreetView(coords.lat, coords.lng, (hasView) => {
+                if (hasView) {
+                    callback(coords);
+                    return;
+                }
+
+                tryGenerate();
+            });
+        }
+
+        tryGenerate();
+    };
+
+    useEffect(() => {
+        if (isLoaded) {
+            getRandomStreetViewCoords((coords) => {
+                if (coords) {
+                    setSession((prevSession: any) => ({
+                        ...prevSession,
+                        correctPos: coords
+                    }));
+                }
+            });
+        }
+    }, [isLoaded]);
+
+    return isLoaded ? (
+        <>
+            {/* This GoogleMap component does nothing and is only here because StreetViewPanorama requires it*/}
+            <GoogleMap mapContainerStyle={{ width: "100%", height: "100vh" }}>
+                <MemoizedStreetViewPanorama options={streetViewOptions} />
+
+                <div
+                    style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        height: "100vh",
+                        position: "relative"
+                    }}
+                >
+                    <h1
+                        className="z-50 items-center justify-center text-2xl font-bold text-center text-white"
+                        style={{
+                            position: "absolute",
+                            bottom: "calc(70px + 25%)",
+                            right: "5px"
+                        }}
+                    >
+                        Score: {score} / 25000
+                    </h1>
+
+                    {/* This GoogleMap component is the actual map in the bottom right corner*/}
+                    <MemoizedGoogleMap
+                        id="street-view"
+                        // @ts-ignore
+                        mapContainerStyle={mapContainerStyle}
+                        center={center}
+                        zoom={0}
+                        onClick={handleMapClick}
+                        options={{
+                            disableDefaultUI: true,
+                            zoomControl: true
+                        }}
+                        onMouseOver={setBigMapTrue}
+                        onMouseOut={setBigMapFalse}
+                    >
+                        {markerPosition && (
+                            <MemoizedMarker position={markerPosition} />
+                        )}
+                    </MemoizedGoogleMap>
+
+                    <Link
+                        href={{
+                            pathname: "/results"
+                        }}
+                    >
+                        <button
+                            className={`${
+                                markerPosition === null
+                                    ? "bg-gray-500 cursor-not-allowed"
+                                    : "bg-green-500"
+                            } w-96 h-6 rounded-lg text-white`}
+                            style={{
+                                zIndex: 200,
+                                position: "absolute",
+                                bottom: "40px",
+                                right: "5px"
+                            }}
+                            disabled={markerPosition === null}
+                        >
+                            Submit
+                        </button>
+                    </Link>
+                </div>
+            </GoogleMap>
+        </>
+    ) : null;
 }
