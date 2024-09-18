@@ -11,7 +11,7 @@
   "dependencies": {
     "@react-google-maps/api": "^2.19.3",
     "geolib": "^3.3.4",
-    "next": "14.1.4",
+    "next": "14.2.10",
     "react": "^18",
     "react-dom": "^18",
     "react-spinners": "^0.13.8"
